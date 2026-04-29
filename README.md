@@ -24,7 +24,7 @@ Requires Windows + Autodesk Inventor 2026 + Python 3.10+.
 
 ```powershell
 pip install fastmcp pywin32
-git clone https://github.com/<your-username>/inventor-ai.git
+git clone https://github.com/dariusnaicker/inventor-ai.git
 cd inventor-ai
 pip install -e .
 ```

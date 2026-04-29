@@ -118,15 +118,16 @@ def build_shaft(api: InventorAPI) -> Path:
     revolve_profile(api, name, profile)
     print(f"  [OK ] revolve 14-point stepped profile (133 mm long)")
 
-    # Left keyway slot: 15 mm long, 3 mm wide, 3 mm deep, end-milled, on the
-    # +X face of the Ø12 section. Centred at Y=15.
+    # Left keyway slot: 15 mm long, 4 mm wide, 2.5 mm deep, end-milled, on the
+    # +X face of the Ø12 section (per H8 keyway table for Ø10..12 shaft dia).
+    # Centred at Y=15.
     # Sketch on a workplane offset to the shaft surface (X=6), then cut-extrude
     # toward the axis (-X) by 3 mm so the slot has the correct flat-bottom
     # depth instead of going through the whole half-shaft.
     code = """
 slot_len_mm = 15.0
-slot_w_mm = 3.0
-slot_depth_mm = 3.0
+slot_w_mm = 4.0
+slot_depth_mm = 2.5
 slot_y_centre_mm = 15.0
 shaft_surface_x_cm = mm_to_cm(6.0)
 
@@ -196,6 +197,62 @@ result = {"feature_name": feat.Name, "hole_depth_mm": hole_depth_mm}
 """
     _check("drill M4 blind hole 10 mm deep at right end face",
            api.run_python(code, part_name=name))
+
+    # Two parallel flats on the Ø10 right end: 7 mm across-flats (AF), 15 mm
+    # long, ending at the right face (Y=133..118).
+    code = """
+flats_af_mm = 7.0
+flats_len_mm = 15.0
+shaft_r_at_ends_mm = 5.0  # Ø10 right end
+half_af_cm = mm_to_cm(flats_af_mm / 2)
+y_start_cm = mm_to_cm(133.0 - flats_len_mm)
+y_end_cm = mm_to_cm(133.0)
+z_far_cm = mm_to_cm(20.0)  # well beyond shaft OD
+
+yz_origin = comp_def.WorkPlanes.Item(1)
+
+# +X flat: workplane at X=+3.5, cut box extending +X
+plane_pos = comp_def.WorkPlanes.AddByPlaneAndOffset(yz_origin, half_af_cm)
+plane_pos.Visible = False
+sketch_pos = comp_def.Sketches.Add(plane_pos)
+sketch_pos.SketchLines.AddAsTwoPointRectangle(
+    tg.CreatePoint2d(y_start_cm, -z_far_cm),
+    tg.CreatePoint2d(y_end_cm,    z_far_cm),
+)
+profile_pos = sketch_pos.Profiles.AddForSolid()
+extrudes = comp_def.Features.ExtrudeFeatures
+ext_def_pos = extrudes.CreateExtrudeDefinition(profile_pos, EXTENT_OP['cut'])
+ext_def_pos.SetDistanceExtent(mm_to_cm(shaft_r_at_ends_mm), EXTENT_DIR['positive'])
+extrudes.Add(ext_def_pos)
+
+# -X flat: workplane at X=-3.5, cut box extending -X
+plane_neg = comp_def.WorkPlanes.AddByPlaneAndOffset(yz_origin, -half_af_cm)
+plane_neg.Visible = False
+sketch_neg = comp_def.Sketches.Add(plane_neg)
+sketch_neg.SketchLines.AddAsTwoPointRectangle(
+    tg.CreatePoint2d(y_start_cm, -z_far_cm),
+    tg.CreatePoint2d(y_end_cm,    z_far_cm),
+)
+profile_neg = sketch_neg.Profiles.AddForSolid()
+ext_def_neg = extrudes.CreateExtrudeDefinition(profile_neg, EXTENT_OP['cut'])
+ext_def_neg.SetDistanceExtent(mm_to_cm(shaft_r_at_ends_mm), EXTENT_DIR['negative'])
+extrudes.Add(ext_def_neg)
+
+result = {"flats_af_mm": flats_af_mm, "length_mm": flats_len_mm}
+"""
+    _check("cut 7 mm AF flats on Ø10 right end", api.run_python(code, part_name=name))
+
+    # Chamfer all edges 0.5 x 45 deg per the brief's blanket note.
+    code = """
+edge_set = app.TransientObjects.CreateEdgeCollection()
+body = comp_def.SurfaceBodies.Item(1)
+for edge in body.Edges:
+    edge_set.Add(edge)
+chamfers = comp_def.Features.ChamferFeatures
+feat = chamfers.AddUsingDistance(edge_set, mm_to_cm(0.5))
+result = {"feature_name": feat.Name, "edges_chamfered": edge_set.Count}
+"""
+    _check("chamfer all edges 0.5 mm", api.run_python(code, part_name=name))
 
     out_ipt = OUT / f"{name}.ipt"
     _check("save_part",   api.save_part(name, str(out_ipt)))

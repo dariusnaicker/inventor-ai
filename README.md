@@ -6,6 +6,12 @@ A Model Context Protocol server for Autodesk Inventor's COM API. Supports parts,
 
 > "Build me a turbocharger cartridge in Inventor" -> three parts, one fully constrained assembly, exported STL + STEP, in one prompt.
 
+## For mech-eng / industrial-design students
+
+If you're learning CAD and feel stuck, this repo is also a working reference for **how to drive Inventor programmatically**. The examples include a stepped pump shaft built directly from a real 2nd-year university drawing brief (`examples/imd254_shaft.py`) -- read the script and you can see exactly which COM calls produce a sketched profile, a revolve, a keyway slot, and a blind threaded hole. Open the resulting `.ipt` in Inventor and step through the feature tree to compare what you'd build by hand.
+
+A note on academic integrity: scripts like these are study aids, not submissions. Submit your own work. The point of the brief is to learn how the part is built and dimensioned, and reading code that builds it is one way to learn that. Don't trade understanding for a shortcut.
+
 ## Why
 
 Autodesk's first-party MCP support is for Fusion 360. Inventor users have been left out. This package fills that gap: 30+ MCP tools that cover the Inventor workflows you'd actually use day-to-day, plus an escape hatch that scales to anything else.
@@ -75,6 +81,16 @@ Builds:
 4. **turbocharger.iam** -- fully constrained: housing grounded, shaft and wheel axis-mated to the housing's Y axis, plane-mated for axial position. 1 free DOF (shaft rotation about Y), as it should be.
 
 Outputs to `_turbo_demo_out/`.
+
+### IMD 254 pump shaft (real university drawing brief)
+
+```powershell
+python examples/imd254_shaft.py
+```
+
+A stepped centrifugal-pump shaft built end-to-end from the dimensions in a 2nd-year ME drawing project at Stellenbosch University. 133 mm long, six diameter steps, a 15 mm end-milled keyway, and an M4 blind threaded hole. Demonstrates that the MCP can hit real-world part complexity, not just toy demos.
+
+Outputs to `_imd254_shaft_out/`. The original PDF brief is course material and is **not** included here.
 
 ## Tool list (30 MCP tools)
 

@@ -18,7 +18,7 @@ STL translator note:
     brief mentioned ...CAA8 which is the DWF translator — never use that).
 
 ProgID note:
-    "Inventor.Application" is the only registered ProgID; Autodesk does
+    "Inventor.Application" (INV.APP) is the only registered ProgID; Autodesk does
     not expose version-suffixed ProgIDs (e.g. "Inventor.Application.26").
     The first installed / last-registered version is what you get.
 
@@ -427,6 +427,48 @@ class InventorAPI:
             center_pt = tg.CreatePoint2d(cx, cy)
             entry["sketch"].SketchCircles.AddByCenterRadius(center_pt, radius_cm)
             return {"success": True, "error": None, "radius_mm": diameter_mm / 2.0}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def draw_line(
+        self,
+        part_name: str,
+        x1_mm: float,
+        y1_mm: float,
+        x2_mm: float,
+        y2_mm: float,
+    ) -> dict[str, Any]:
+        """
+        Draw a line segment between two points on the active sketch.
+
+        Args:
+            part_name: Logical name of the part.
+            x1_mm: X coordinate of line start (mm).
+            y1_mm: Y coordinate of line start (mm).
+            x2_mm: X coordinate of line end (mm).
+            y2_mm: Y coordinate of line end (mm).
+
+        Returns:
+            {"success": bool, "error": str|None, "length_mm": float}
+        """
+        try:
+            entry = self._get_doc_entry(part_name)
+            if entry["sketch"] is None:
+                raise RuntimeError("No active sketch. Call new_sketch() first.")
+            app = self._get_app()
+            tg = app.TransientGeometry
+            x1 = self._mm_to_cm(x1_mm)
+            y1 = self._mm_to_cm(y1_mm)
+            x2 = self._mm_to_cm(x2_mm)
+            y2 = self._mm_to_cm(y2_mm)
+            p1 = tg.CreatePoint2d(x1, y1)
+            p2 = tg.CreatePoint2d(x2, y2)
+            entry["sketch"].SketchLines.AddByTwoPoints(p1, p2)
+            # Calculate length in mm
+            dx = x2_mm - x1_mm
+            dy = y2_mm - y1_mm
+            length_mm = (dx**2 + dy**2) ** 0.5
+            return {"success": True, "error": None, "length_mm": length_mm}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
